@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>متجر Lض</title>
+<style>
+:root{--bg:#eef2f4;--surface:#fff;--ink:#12263a;--muted:#5d6f7e;--accent:#0d7c86;--line:#d6dee3;--danger:#b3261e;--ok:#1b6e3c}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Tajawal",system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif}
+.app{max-width:960px;margin:0 auto;padding:0 16px 48px}
+button{font:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.top{display:flex;justify-content:space-between;align-items:center;padding:18px 0}
+.brand{background:none;border:0;font-size:2rem;font-weight:800;color:var(--ink);padding:0}
+.cart-btn{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:8px 16px;color:var(--ink)}
+.badge{display:inline-block;min-width:22px;padding:0 6px;margin-inline-start:6px;border-radius:999px;background:var(--accent);color:#fff;text-align:center}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px}
+.card h3{margin:6px 0 0;font-size:1.1rem}
+.thumb{height:100px;border-radius:8px;background:#dbe9ec;color:var(--accent);display:grid;place-items:center;font-size:2.8rem;font-weight:800}
+.muted{color:var(--muted);margin:0;font-size:.95rem}
+.row{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:10px}
+.btn{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:10px 16px;font-weight:700}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+.btn.wide{width:100%;margin-top:12px;padding:14px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;max-width:620px;margin:0 auto}
+.panel h2{margin-top:0}
+.center{text-align:center}
+.line{display:grid;grid-template-columns:1fr auto auto;gap:14px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.qty{display:flex;align-items:center;gap:10px}
+.qty button{width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.total{display:flex;justify-content:space-between;padding:14px 0 4px;font-size:1.15rem}
+label{display:block;margin-top:14px;font-weight:500}
+input,textarea{display:block;width:100%;margin-top:6px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff;color:var(--ink)}
+.err{color:var(--danger);font-size:.9rem}
+.box{background:#fbeae9;border-radius:8px;padding:10px 12px;margin:12px 0 0;word-break:break-word}
+code{background:var(--bg);padding:2px 8px;border-radius:6px;direction:ltr;display:inline-block;word-break:break-all}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <button class="brand" id="brand">Lض</button>
+    <button class="cart-btn" id="cartBtn">السلة <span class="badge" id="count">0</span></button>
+  </header>
+  <main id="main"></main>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBwRWmIaTq2HeuDEDDr_Sbux-cXFFu2rrg",
+  authDomain: "l-dha-cd317.firebaseapp.com",
+  projectId: "l-dha-cd317",
+  storageBucket: "l-dha-cd317.firebasestorage.app",
+  messagingSenderId: "419762706394",
+  appId: "1:419762706394:web:57f4321e681364c35492e3",
+  measurementId: "G-Q89049EY10"
+};
+const db = getFirestore(initializeApp(firebaseConfig));
+
+const CURRENCY = "₪";
+const PRODUCTS = [
+  { id: "p1", name: "قميص قطن", price: 45, desc: "قصّة مريحة، قطن 100%" },
+  { id: "p2", name: "بنطلون جينز", price: 90, desc: "قماش متين، لون أزرق داكن" },
+  { id: "p3", name: "جاكيت خفيف", price: 120, desc: "مناسب للربيع والخريف" },
+  { id: "p4", name: "حذاء رياضي", price: 150, desc: "نعل مرن وخفيف" },
+  { id: "p5", name: "حقيبة ظهر", price: 70, desc: "مقاومة للماء، جيب للابتوب" },
+  { id: "p6", name: "قبعة", price: 25, desc: "قابلة للتعديل" }
+];
+
+let cart = [];
+try { cart = JSON.parse(localStorage.getItem("cart")) || []; } catch (e) { cart = []; }
+let view = "shop", orderId = "", saving = false, errorMsg = "";
+let form = { name: "", phone: "", address: "" }, errors = {};
+
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const total = () => cart.reduce((s, i) => s + i.price * i.qty, 0);
+const count = () => cart.reduce((s, i) => s + i.qty, 0);
+const save = () => { try { localStorage.setItem("cart", JSON.stringify(cart)); } catch (e) {} };
+
+function go(v) { view = v; render(); window.scrollTo(0, 0); }
+
+function render() {
+  $("#count").textContent = count();
+  const m = $("#main");
+  if (view === "shop") {
+    m.innerHTML = '<section class="grid">' + PRODUCTS.map((p) =>
+      `<article class="card"><div class="thumb">${esc(p.name[0])}</div><h3>${esc(p.name)}</h3><p class="muted">${esc(p.desc)}</p>
+       <div class="row"><strong>${p.price} ${CURRENCY}</strong><button class="btn" data-add="${p.id}">أضف للسلة</button></div></article>`
+    ).join("") + "</section>";
+  } else if (view === "cart") {
+    if (!cart.length) {
+      m.innerHTML = '<section class="panel"><h2>سلة المشتريات</h2><p class="muted">السلة فاضية. اختار منتجات من المتجر.</p><button class="btn" data-go="shop">تصفح المنتجات</button></section>';
+    } else {
+      m.innerHTML = '<section class="panel"><h2>سلة المشتريات</h2>' + cart.map((i) =>
+        `<div class="line"><div><strong>${esc(i.name)}</strong><div class="muted">${i.price} ${CURRENCY}</div></div>
+         <div class="qty"><button data-dec="${i.id}">−</button><span>${i.qty}</span><button data-inc="${i.id}">+</button></div>
+         <strong>${i.price * i.qty} ${CURRENCY}</strong></div>`).join("") +
+        `<div class="total"><span>المجموع</span><strong>${total()} ${CURRENCY}</strong></div>
+         <button class="btn wide" data-go="checkout">إتمام الطلب</button></section>`;
+    }
+  } else if (view === "checkout") {
+    m.innerHTML = `<section class="panel"><h2>بيانات التوصيل</h2><form id="f" novalidate>
+      <label>الاسم الكامل<input id="name" type="text" value="${esc(form.name)}">${errors.name ? `<span class="err">${errors.name}</span>` : ""}</label>
+      <label>رقم التلفون<input id="phone" type="tel" value="${esc(form.phone)}">${errors.phone ? `<span class="err">${errors.phone}</span>` : ""}</label>
+      <label>العنوان<textarea id="address" rows="3">${esc(form.address)}</textarea>${errors.address ? `<span class="err">${errors.address}</span>` : ""}</label>
+      <div class="total"><span>المجموع (${count()} منتجات)</span><strong>${total()} ${CURRENCY}</strong></div>
+      ${errorMsg ? `<p class="err box">${esc(errorMsg)}</p>` : ""}
+      <button class="btn wide" ${saving || !cart.length ? "disabled" : ""}>${saving ? "جاري الحفظ..." : "تأكيد الطلب"}</button></form></section>`;
+  } else {
+    m.innerHTML = `<section class="panel center"><h2>تم استلام طلبك</h2><p>رقم الطلب: <code>${esc(orderId)}</code></p>
+      <p class="muted">رح نتواصل معك على رقم التلفون لتأكيد التوصيل.</p><button class="btn" data-go="shop">رجوع للمتجر</button></section>`;
+  }
+}
+
+function validate() {
+  errors = {};
+  if (form.name.trim().length < 3) errors.name = "اكتب الاسم الكامل";
+  if (!/^[0-9+\s-]{8,15}$/.test(form.phone.trim())) errors.phone = "رقم التلفون غير صحيح";
+  if (form.address.trim().length < 5) errors.address = "اكتب العنوان بالتفصيل";
+  return Object.keys(errors).length === 0;
+}
+
+async function submit() {
+  form = { name: $("#name").value, phone: $("#phone").value, address: $("#address").value };
+  if (!validate() || !cart.length || saving) { render(); return; }
+  saving = true; errorMsg = ""; render();
+  try {
+    const ref = await addDoc(collection(db, "orders"), {
+      name: form.name.trim(),
+      phone: form.phone.trim(),
+      address: form.address.trim(),
+      cart: cart.map((i) => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
+      total: total(),
+      createdAt: serverTimestamp()
+    });
+    orderId = ref.id; cart = []; save(); form = { name: "", phone: "", address: "" };
+    saving = false; go("done");
+  } catch (e) {
+    console.error(e);
+    saving = false;
+    errorMsg = e.code === "permission-denied"
+      ? "ما انحفظ الطلب: قواعد Firestore ترفض الكتابة. (permission-denied)"
+      : "ما انحفظ الطلب. رمز الخطأ: " + (e.code || e.message || "غير معروف");
+    render();
+  }
+}
+
+document.addEventListener("click", (ev) => {
+  const t = ev.target.closest("button");
+  if (!t) return;
+  if (t.id === "brand") return go("shop");
+  if (t.id === "cartBtn") return go("cart");
+  if (t.dataset.go) return go(t.dataset.go);
+  if (t.dataset.add) {
+    const p = PRODUCTS.find((x) => x.id === t.dataset.add);
+    const f = cart.find((i) => i.id === p.id);
+    if (f) f.qty++; else cart.push({ id: p.id, name: p.name, price: p.price, qty: 1 });
+    save(); $("#count").textContent = count();
+    t.textContent = "تمت الإضافة ✓"; setTimeout(() => (t.textContent = "أضف للسلة"), 800);
+    return;
+  }
+  if (t.dataset.inc || t.dataset.dec) {
+    const id = t.dataset.inc || t.dataset.dec;
+    const it = cart.find((i) => i.id === id);
+    it.qty += t.dataset.inc ? 1 : -1;
+    cart = cart.filter((i) => i.qty > 0);
+    save(); render();
+  }
+});
+document.addEventListener("submit", (ev) => { ev.preventDefault(); submit(); });
+render();
+</script>
+</body>
+</html>
