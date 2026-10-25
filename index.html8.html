@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ابتسم</title>
+<style>
+:root{--bg:#fdf6e3;--ink:#2b2250;--card:#fff;--acc:#f5b301;--acc2:#6c4fd6;--muted:#6b6590;--line:#eadfbe;--bad:#b3261e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Tajawal",system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;min-height:100vh}
+.app{max-width:640px;margin:0 auto;padding:14px 16px 40px}
+button{font:inherit;cursor:pointer}
+button:focus-visible,textarea:focus-visible{outline:3px solid var(--acc2);outline-offset:2px}
+.bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.logo{background:none;border:0;font-size:1.6rem;font-weight:800;color:var(--ink);padding:0}
+.pts{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-weight:700}
+.hero{text-align:center;padding:70px 10px}
+.hero .big{font-size:5rem}
+.hero h1{font-size:1.7rem;margin:12px 0}
+.btn{background:var(--acc2);color:#fff;border:0;border-radius:12px;padding:12px 20px;font-weight:700}
+.btn.y{background:var(--acc);color:var(--ink)}
+.btn.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+.btn.wide{width:100%;margin-top:12px}
+.btn:disabled{opacity:.6}
+.moods{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:20px 0}
+.moods button{font-size:2.4rem;background:var(--card);border:2px solid var(--line);border-radius:16px;padding:10px 14px}
+.banner{background:var(--acc);border-radius:14px;padding:12px 14px;margin-bottom:14px;font-weight:700}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 10px;text-align:center;color:var(--ink);font-weight:700}
+.tile span{display:block;font-size:2.2rem;margin-bottom:6px}
+.tile small{display:block;color:var(--muted);font-weight:400}
+h2{margin:18px 0 10px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:12px}
+.joke{font-size:1.2rem;line-height:1.8}
+.muted{color:var(--muted);font-size:.95rem}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px}
+.vote{background:#fff3c4;border:1px solid var(--line);border-radius:999px;padding:6px 14px}
+textarea{width:100%;border:1px solid var(--line);border-radius:12px;padding:10px;font:inherit;background:#fff;color:var(--ink)}
+.err{color:var(--bad);margin:8px 0 0;word-break:break-word}
+.tap{font-size:5rem;background:var(--acc);border:0;border-radius:50%;width:160px;height:160px;display:block;margin:16px auto}
+.tap:active{transform:scale(.94)}
+.breath{width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,#6c4fd6,#1a1235);margin:20px auto;animation:b 8s ease-in-out infinite;box-shadow:0 0 40px #6c4fd655}
+@keyframes b{0%,100%{transform:scale(.7)}50%{transform:scale(1.15)}}
+.dark{background:#1a1235;color:#eee;border-radius:16px;padding:18px;text-align:center}
+.dark textarea{background:#2b2250;color:#fff;border-color:#463a7c}
+@media (prefers-reduced-motion:reduce){.breath{animation:none}}
+</style>
+</head>
+<body>
+<div class="app"><div class="bar"><button class="logo" id="logo" data-go="home"></button><span><button class="pts" id="lng" data-act="lang"></button> <span class="pts" id="pts"></span></span></div><main id="m"></main></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, increment, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+const db = getFirestore(initializeApp({
+  apiKey: "AIzaSyBwRWmIaTq2HeuDEDDr_Sbux-cXFFu2rrg",
+  authDomain: "l-dha-cd317.firebaseapp.com",
+  projectId: "l-dha-cd317",
+  storageBucket: "l-dha-cd317.firebasestorage.app",
+  messagingSenderId: "419762706394",
+  appId: "1:419762706394:web:57f4321e681364c35492e3"
+}));
+
+// اللغات المتاحة. للإنجليزي فقط اكتب: ["en"]  |  Arabic only: ["ar"]
+const LANGS = ["ar", "en"];
+
+const JOKES = [
+  ["سأل الطالب المعلم: هل يعاقبني الأستاذ على شي ما عملته؟ قال: لا طبعاً. قال: الحمد لله، أنا ما عملت الواجب.","Student: Can I be punished for something I didn't do? Teacher: Of course not. Student: Great, I didn't do my homework."],
+  ["واحد قال لصاحبه: صرت أحلم إني بطير. قال: وشو بتعمل؟ قال: بصحى قبل ما أنزل.","I told my friend I dream of flying. He asked, what do you do? I wake up before landing."],
+  ["قال المريض للدكتور: كل ما أشرب قهوة بتوجعني عيني. قال: جرّب تشيل الملعقة من الكوب.","Patient: My eye hurts every time I drink coffee. Doctor: Try taking the spoon out of the cup."],
+  ["سألوا النملة: ليش دايماً مستعجلة؟ قالت: خايفة أتأخر على الشتا.","They asked the ant why she's always in a hurry. She said: I'm afraid of being late for winter."],
+  ["الواي فاي قال للتلفون: انت ما بتحبني إلا لما تحتاجني. قال التلفون: وانت لما بتروح بتاخد قلبي معك.","The Wi-Fi told the phone: you only love me when you need me. The phone said: and when you leave, you take my heart with you."],
+  ["ولد سأل أبوه: ليش القمر مدوّر؟ قال: عشان ما يتعب الناس بالزوايا.","A kid asked his dad: why is the moon round? Dad: so people don't get tired of corners."],
+  ["قال الكسلان: أنا ما بأجّل شغل الغد لبعده، بأجّله لليوم اللي بعده.","The lazy man says: I never postpone work till tomorrow, I postpone it till the day after."]
+];
+const MOMENTS = [
+  ["موقف: تدوّر على نظارتك في كل البيت وهي على راسك.","Moment: You search the whole house for your glasses, and they're on your head."],
+  ["موقف: تحكي مع نفسك بصوت عالي وتكتشف إن في حدا واقف وراك.","Moment: You talk to yourself out loud and find someone standing behind you."],
+  ["موقف: تفتح الثلاجة، تسكرها، وتفتحها ثاني كأن الأكل رح يتغير.","Moment: You open the fridge, close it, and open it again as if the food changed."],
+  ["موقف: تقول 'مرحبا' للمذيع وانت بتتفرج على التلفزيون.","Moment: You say 'hello' back to the TV host."],
+  ["موقف: تدوّر على السماعة وهي في أذنك.","Moment: You look for your earphones while they're in your ears."],
+  ["موقف: تسلّم على الشخص الغلط وتكمل مشوارك كأن شي ما صار.","Moment: You greet the wrong person and keep walking like nothing happened."],
+  ["موقف: تحط الملح بدل السكر بالشاي وتشربه بثقة.","Moment: You put salt instead of sugar in your tea and drink it confidently."]
+];
+const RIDDLES = [
+  [["شي له أسنان وما بيعض؟","المشط"],["What has teeth but never bites?","A comb"]],
+  [["بيمشي بدون رجلين وبيبكي بدون عينين؟","الغيمة"],["What walks without legs and cries without eyes?","A cloud"]],
+  [["شي كل ما أخذت منه كبر؟","الحفرة"],["What gets bigger the more you take from it?","A hole"]],
+  [["عنده مفاتيح وما بيفتح باب؟","لوحة المفاتيح"],["What has keys but opens no door?","A keyboard"]],
+  [["بيسمع بلا أذن وبيحكي بلا لسان؟","الصدى"],["What hears without ears and speaks without a tongue?","An echo"]],
+  [["كل ما زاد نقص؟","العمر"],["The more of it passes, the less is left?","Your age"]]
+];
+const CHALLENGES = [
+  ["اضحك ضحكة طويلة أمام المراية وحاول ما تبتسم بعدها.","Laugh a long laugh in the mirror, then try not to smile after."],
+  ["احكي نكتة لشخص واحد على الأقل اليوم.","Tell a joke to at least one person today."],
+  ["اعمل وجه مضحك قدام المراية.","Make a funny face at yourself in the mirror."],
+  ["قل لشخص كلمة حلوة تضحكه.","Say something kind that makes someone smile."],
+  ["غنّ أغنية بصوت مضحك وانت تغسل إيدك.","Sing a silly song while washing your hands."]
+];
+const ROOMS = {
+  daily:["🌞","نكتة اليوم","Joke of the Day","نكتة وموقف كل يوم","A joke and a moment daily"],
+  people:["🗣️","نكت الناس","People's Jokes","اكتب وصوّت","Post and vote"],
+  riddles:["🧩","ألغاز","Riddles","فكّر واضحك","Think and smile"],
+  challenge:["🎯","تحدي اليوم","Today's Challenge","مهمة صغيرة","A tiny mission"],
+  tap:["👆","لعبة الابتسامة","Smile Game","10 ثواني","10 seconds"],
+  swap:["🤝","تبادل مهارات","Skills Swap","قريباً","Coming soon"]
+};
+const WORLDS = [
+  {i:"😂",n:["بلاد الضحك","Land of Laughter"],rooms:["daily","people","riddles"]},
+  {i:"🎮",n:["بلاد اللعب","Land of Play"],rooms:["challenge","tap","swap"]}
+];
+const CYCLE = WORLDS.flatMap(w => w.rooms);
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const get = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
+const set = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+let lang = get("lang", (navigator.language || "").startsWith("ar") ? "ar" : "en");
+if (!LANGS.includes(lang)) lang = LANGS[0];
+const t = (a, e) => lang === "ar" ? a : e;
+const pk = p => lang === "ar" ? p[0] : p[1];
+const day = Math.floor(Date.now() / 86400000);
+let pts = get("pts", 0), screen = get("seen", false) ? "home" : "splash", st = {};
+
+const addPts = n => { pts += n; set("pts", pts); $("#pts").textContent = "⭐ " + pts; };
+const go = s => { screen = s; st = {}; render(); window.scrollTo(0, 0); };
+const nextBtn = r => { const n = CYCLE[(CYCLE.indexOf(r) + 1) % CYCLE.length], R = ROOMS[n]; return `<button class="btn y wide" data-go="room:${n}">${t("الغرفة التالية","Next room")}: ${R[0]} ${t(R[1], R[2])} ➜</button><button class="btn ghost wide" data-go="home">${t("رجوع للعوالم","Back to worlds")}</button>`; };
+
+async function loadJokes() {
+  st.loading = true; st.err = ""; render();
+  try {
+    const s = await getDocs(query(collection(db, "jokes"), orderBy("createdAt", "desc"), limit(40)));
+    st.list = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.votes || 0) - (a.votes || 0));
+  } catch (e) { st.err = t("ما قدرنا نحمّل النكت. ", "Couldn't load jokes. ") + "(" + (e.code || e.message) + ")"; st.list = []; }
+  st.loading = false; render();
+}
+
+function render() {
+  document.documentElement.lang = lang; document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+  $("#logo").textContent = t("😄 ابتسم", "😄 Smile");
+  $("#lng").textContent = lang === "ar" ? "EN" : "ع"; $("#lng").style.display = LANGS.length > 1 ? "" : "none";
+  $("#pts").textContent = "⭐ " + pts;
+  const m = $("#m"), [k, a] = screen.split(":");
+  if (k === "splash") {
+    m.innerHTML = `<div class="hero"><div class="big">😄</div><h1>${t("ابتسم... شفت؟<br>ابتسامتك جميلة طلعت","Smile... see?<br>Your smile looks great")}</h1><button class="btn y" data-go="mood">${t("ابدأ مشوارك بابتسامة","Start your journey with a smile")}</button></div>`;
+  } else if (k === "mood") {
+    m.innerHTML = `<h2>${t("كيف مزاجك اليوم؟","How are you feeling today?")}</h2><div class="moods">${["😄","🙂","😐","😔","😡"].map(e => `<button data-mood="${e}">${e}</button>`).join("")}</div><p class="muted">${t("اختيارك بيضل على جهازك بس.","Your choice stays on your device only.")}</p>`;
+  } else if (k === "home") {
+    m.innerHTML = `<div class="banner">${t("تذكّر أن تضحك اليوم 😄","Remember to laugh today 😄")}</div>` +
+      WORLDS.map(w => `<h2>${w.i} ${pk(w.n)}</h2><div class="grid">${w.rooms.map(r => { const R = ROOMS[r]; return `<button class="tile" data-go="room:${r}"><span>${R[0]}</span>${t(R[1], R[2])}<small>${t(R[3], R[4])}</small></button>`; }).join("")}</div>`).join("") +
+      `<h2>🕳️ ${t("غرفة خاصة","Private room")}</h2><button class="tile" style="width:100%;background:#1a1235;color:#fff" data-go="hole"><span>🕳️</span>${t("الثقب الأسود","The Black Hole")}<small style="color:#bbb">${t("للأيام الثقيلة","For heavy days")}</small></button>`;
+  } else if (k === "hole") {
+    m.innerHTML = `<div class="dark"><h2 style="margin-top:0">🕳️ ${t("الثقب الأسود","The Black Hole")}</h2><p>${t("خد نفس عميق مع الدائرة: شهيق وهي بتكبر، زفير وهي بتصغر.","Breathe with the circle: inhale as it grows, exhale as it shrinks.")}</p><div class="breath"></div>
+      <p>${t("اكتب اللي تقيل عليك، وارمِه بالثقب.","Write what feels heavy, and throw it into the hole.")}</p><textarea id="hole" rows="3" placeholder="${t("اكتب هون...","Write here...")}"></textarea>
+      ${st.thrown ? `<p>${t("انرمت 🌌 وما انحفظت بأي مكان.","Thrown away 🌌 and not saved anywhere.")}</p>` : `<button class="btn y wide" data-act="throw">${t("ارمِها بالثقب","Throw it in")}</button>`}
+      <p class="muted" style="color:#bbb">${t("إذا الأيام الثقيلة بتتكرر، احكي مع شخص بتثق فيه.","If heavy days keep coming back, talk to someone you trust.")}</p>
+      <button class="btn wide" data-go="room:daily">${t("رجعني بابتسامة 😄","Bring me back with a smile 😄")}</button></div>`;
+  } else if (a === "daily") {
+    const l = get("l" + day, false);
+    m.innerHTML = `<h2>🌞 ${t("نكتة اليوم","Joke of the Day")}</h2><div class="panel joke">${esc(pk(JOKES[day % JOKES.length]))}</div><h2>${t("موقف مضحك","A funny moment")}</h2><div class="panel joke">${esc(pk(MOMENTS[day % MOMENTS.length]))}</div>
+      <button class="btn y wide" data-act="laughed" ${l ? "disabled" : ""}>${l ? t("ضحكت اليوم ✓","Laughed today ✓") : t("ضحكت! (+5 ⭐)","I laughed! (+5 ⭐)")}</button>${nextBtn("daily")}`;
+  } else if (a === "people") {
+    if (!st.list && !st.loading) loadJokes();
+    const voted = get("voted", []), list = (st.list || []).filter(j => (j.lang || "ar") === lang);
+    m.innerHTML = `<h2>🗣️ ${t("نكت الناس","People's Jokes")}</h2><div class="panel"><textarea id="nj" rows="3" maxlength="300" placeholder="${t("اكتب نكتتك (نظيفة ومضحكة)...","Write your joke (clean and funny)...")}"></textarea>
+      <button class="btn wide" data-act="post" ${st.saving ? "disabled" : ""}>${st.saving ? t("جاري النشر...","Posting...") : t("انشر النكتة (+10 ⭐)","Post joke (+10 ⭐)")}</button>${st.perr ? `<p class="err">${esc(st.perr)}</p>` : ""}</div>` +
+      (st.loading ? `<p class="muted">${t("جاري التحميل...","Loading...")}</p>` : "") + (st.err ? `<p class="err">${esc(st.err)}</p>` : "") +
+      list.map(j => `<div class="panel"><div class="joke">${esc(j.text || "")}</div><div class="row"><span class="muted">${t("الأضحك يطلع فوق","Funniest rises to the top")}</span><button class="vote" data-vote="${j.id}" ${voted.includes(j.id) ? "disabled" : ""}>😂 ${j.votes || 0}</button></div></div>`).join("") +
+      (list.length || st.loading || st.err ? "" : `<p class="muted">${t("لسا ما في نكت. كن أول واحد!","No jokes yet. Be the first!")}</p>`) + nextBtn("people");
+  } else if (a === "riddles") {
+    const i = (st.i || 0) % RIDDLES.length, r = pk(RIDDLES[i]);
+    m.innerHTML = `<h2>🧩 ${t("لغز","Riddle")} ${i + 1}/${RIDDLES.length}</h2><div class="panel joke">${esc(r[0])}</div>${st.show ? `<div class="panel joke">✅ ${esc(r[1])}</div><button class="btn wide" data-act="rnext">${t("لغز ثاني","Next riddle")}</button>` : `<button class="btn y wide" data-act="reveal">${t("شوف الجواب (+3 ⭐)","Show answer (+3 ⭐)")}</button>`}${nextBtn("riddles")}`;
+  } else if (a === "challenge") {
+    const done = get("c" + day, false);
+    m.innerHTML = `<h2>🎯 ${t("تحدي اليوم","Today's Challenge")}</h2><div class="panel joke">${esc(pk(CHALLENGES[day % CHALLENGES.length]))}</div><button class="btn y wide" data-act="chal" ${done ? "disabled" : ""}>${done ? t("أنجزته ✓","Done ✓") : t("أنجزت التحدي! (+10 ⭐)","I did it! (+10 ⭐)")}</button>${nextBtn("challenge")}`;
+  } else if (a === "tap") {
+    m.innerHTML = `<h2>👆 ${t("لعبة الابتسامة","Smile Game")}</h2><p class="muted">${t("اضغط الوجه أكتر ما تقدر خلال 10 ثواني.","Tap the face as many times as you can in 10 seconds.")}</p>
+      ${st.over ? `<div class="panel joke" style="text-align:center">${t("نتيجتك","Your score")}: ${st.n} 🎉</div><button class="btn y wide" data-act="again">${t("العب مرة ثانية","Play again")}</button>` : `<div style="text-align:center" class="joke">${st.run ? "⏱️ " + st.t + " | " + st.n : t("جاهز؟","Ready?")}</div><button class="tap" data-act="tap">😄</button>`}${nextBtn("tap")}`;
+  } else if (a === "swap") {
+    m.innerHTML = `<h2>🤝 ${t("تبادل مهارات","Skills Swap")}</h2><div class="panel joke">${t("هاي الغرفة قيد التجهيز. هون رح الناس تتبادل معلومات ومهارات 🚪","This room is being prepared. Soon people will swap knowledge and skills here 🚪")}</div>${nextBtn("swap")}`;
+  }
+}
+
+document.addEventListener("click", async ev => {
+  const b = ev.target.closest("button"); if (!b) return;
+  if (b.dataset.act === "lang") { lang = lang === "ar" ? "en" : "ar"; set("lang", lang); return render(); }
+  if (b.dataset.go) { if (b.dataset.go === "home") set("seen", true); return go(b.dataset.go); }
+  if (b.dataset.mood) { set("seen", true); set("mood", b.dataset.mood); return go(["😔","😡"].includes(b.dataset.mood) ? "hole" : "home"); }
+  const act = b.dataset.act;
+  if (act === "throw") { const x = $("#hole"); if (x) x.value = ""; st.thrown = true; return render(); }
+  if (act === "laughed") { set("l" + day, true); addPts(5); return render(); }
+  if (act === "chal") { set("c" + day, true); addPts(10); return render(); }
+  if (act === "reveal") { st.show = true; addPts(3); return render(); }
+  if (act === "rnext") { st.i = (st.i || 0) + 1; st.show = false; return render(); }
+  if (act === "again") { st = {}; return render(); }
+  if (act === "tap") {
+    if (!st.run) { st = { run: true, n: 0, t: 10 }; const iv = setInterval(() => { st.t--; if (st.t <= 0) { clearInterval(iv); st.run = false; st.over = true; addPts(Math.floor(st.n / 5)); } render(); }, 1000); }
+    st.n++; return render();
+  }
+  if (act === "post") {
+    const text = ($("#nj").value || "").trim();
+    if (text.length < 5) { st.perr = t("اكتب نكتة أطول شوي.","Write a slightly longer joke."); return render(); }
+    st.saving = true; st.perr = ""; render();
+    try { await addDoc(collection(db, "jokes"), { text, lang, votes: 0, createdAt: serverTimestamp() }); addPts(10); st.saving = false; return loadJokes(); }
+    catch (e) { st.saving = false; st.perr = t("ما انحفظت النكتة. ","Couldn't save the joke. ") + "(" + (e.code || e.message) + ")"; return render(); }
+  }
+  if (b.dataset.vote) {
+    const id = b.dataset.vote, v = get("voted", []); if (v.includes(id)) return;
+    try { await updateDoc(doc(db, "jokes", id), { votes: increment(1) }); v.push(id); set("voted", v); addPts(1); const j = (st.list || []).find(x => x.id === id); if (j) j.votes = (j.votes || 0) + 1; render(); }
+    catch (e) { st.err = t("ما انحسب التصويت. ","Vote failed. ") + "(" + (e.code || e.message) + ")"; render(); }
+  }
+});
+render();
+</script>
+</body>
+</html>
